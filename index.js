@@ -16,6 +16,26 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
 
+const PAGE_SIZE = 5;
+
+function buildPlayersPage(players, page) {
+  const start = page * PAGE_SIZE;
+  const pagePlayers = players.slice(start, start + PAGE_SIZE);
+
+  return pagePlayers
+    .map((player) => {
+      return [
+        `**${player.username}**`,
+        `${ROLE_EMOJIS[player.preferences[0]]} ⭐⭐⭐⭐⭐`,
+        `${ROLE_EMOJIS[player.preferences[1]]} ⭐⭐⭐⭐`,
+        `${ROLE_EMOJIS[player.preferences[2]]} ⭐⭐⭐`,
+        `${ROLE_EMOJIS[player.preferences[3]]} ⭐⭐`,
+        `${ROLE_EMOJIS[player.preferences[4]]} ⭐`,
+      ].join("\n");
+    })
+    .join("\n\n");
+}
+
 const ROLE_OPTIONS = [
   {
     label: "Top",
@@ -288,21 +308,28 @@ client.on(Events.InteractionCreate, async (interaction) => {
         return interaction.reply("Nenhum jogador inscrito.");
       }
 
-      const content = players
-        .map((player) => {
-          return [
-            `**${player.username}**`,
-            `${ROLE_EMOJIS[player.preferences[0]]} ⭐⭐⭐⭐⭐ `,
-            `${ROLE_EMOJIS[player.preferences[1]]} ⭐⭐⭐⭐`,
-            `${ROLE_EMOJIS[player.preferences[2]]} ⭐⭐⭐`,
-            `${ROLE_EMOJIS[player.preferences[3]]} ⭐⭐`,
-            `${ROLE_EMOJIS[player.preferences[4]]} ⭐`,
-          ].join("\n");
-        })
-        .join("\n\n");
+      const page = 0;
+      const totalPages = Math.ceil(players.length / PAGE_SIZE);
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`players_prev_${page}`)
+          .setLabel("⬅️")
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(true),
+
+        new ButtonBuilder()
+          .setCustomId(`players_next_${page}`)
+          .setLabel("➡️")
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(totalPages <= 1),
+      );
 
       await interaction.reply({
-        content,
+        content:
+          buildPlayersPage(players, page) +
+          `\n\nPágina ${page + 1}/${totalPages}`,
+        components: [row],
         ephemeral: true,
       });
     }
@@ -311,6 +338,48 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   if (interaction.isButton()) {
+    if (
+      interaction.customId.startsWith("players_prev_") ||
+      interaction.customId.startsWith("players_next_")
+    ) {
+      const players = await getPlayers();
+
+      const totalPages = Math.ceil(players.length / PAGE_SIZE);
+
+      let page = Number(interaction.customId.split("_").pop());
+
+      if (interaction.customId.startsWith("players_next_")) {
+        page++;
+      } else {
+        page--;
+      }
+
+      page = Math.max(0, Math.min(page, totalPages - 1));
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`players_prev_${page}`)
+          .setLabel("⬅️")
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(page === 0),
+
+        new ButtonBuilder()
+          .setCustomId(`players_next_${page}`)
+          .setLabel("➡️")
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(page >= totalPages - 1),
+      );
+
+      await interaction.update({
+        content:
+          buildPlayersPage(players, page) +
+          `\n\nPágina ${page + 1}/${totalPages}`,
+        components: [row],
+      });
+
+      return;
+    }
+
     if (interaction.customId === "register") {
       draftRegistrations.delete(interaction.user.id);
 

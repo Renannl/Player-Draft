@@ -13,58 +13,72 @@
       "registeredAt": "2026-06-11T12:00:00.000Z"
     },
     {
+      "discordId": "123",
       "username": "Renan",
       "preferences": ["JG", "ADC", "SUP","MID", "TOP"]
     },
     {
+      "discordId": "456",
       "username": "Joao",
       "preferences": ["JG", "SUP", "ADC", "MID", "TOP"]
     },
     {
+      "discordId": "789",
       "username": "Bruno",
       "preferences": ["JG", "SUP", "TOP", "ADC", "MID"]
     },
     {
+      "discordId": "101",
       "username": "Carlos",
       "preferences": ["MID", "TOP", "JG", "ADC", "SUP"]
     },
     {
+      "discordId": "102",
       "username": "Pedro",
       "preferences": ["SUP", "MID", "JG", "ADC", "TOP"]
     },
     {
+      "discordId": "103",
       "username": "Pedro Aides",
       "preferences": ["SUP", "MID", "JG", "ADC", "TOP"]
     },
     {
+      "discordId": "104",
       "username": "Pedro Aidescrew",
       "preferences": ["SUP", "MID", "JG", "ADC", "TOP"]
     },
     {
+      "discordId": "105",
       "username": "Pedrowqsa",
       "preferences": ["SUP", "MID", "JG", "ADC", "TOP"]
     },
     {
+      "discordId": "106",
       "username": "Bruno testador",
       "preferences": ["JG", "SUP", "TOP", "ADC", "MID"]
     },
     {
+      "discordId": "107",
       "username": "Pedro Aidescrewv2 att",
       "preferences": ["SUP", "JG", "MID", "ADC", "TOP"]
     },
     {
+      "discordId": "108",
       "username": "PTESTE",
       "preferences": ["SUP","JG", "ADC", "MID", "TOP"]
     },
     {
+      "discordId": "109",
       "username": "PTESTE 22",
       "preferences": ["SUP","JG", "ADC", "MID", "TOP"]
     },
     {
+      "discordId": "110",
       "username": "TTTTESTE jungler",
       "preferences": ["JG","TOP", "ADC", "MID", "TOP"]
     },
     {
+      "discordId": "111",
       "username": "ADC Q VAI TER SUP E JG NA FRENTE",
       "preferences": ["SUP","JG", "ADC", "MID", "TOP"]
     }
