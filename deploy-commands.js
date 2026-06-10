@@ -12,6 +12,11 @@ const commands = [
     .setName("inscritos")
     .setDescription("Lista os jogadores inscritos")
     .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("setup-painel")
+    .setDescription("Cria o painel de inscrições")
+    .toJSON(),
 ];
 
 const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);

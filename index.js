@@ -104,6 +104,72 @@ async function savePlayer(discordId, playerData) {
   await fs.writeJson(PLAYERS_FILE, data, { spaces: 2 });
 }
 
+const PANEL_FILE = path.join(__dirname, "data", "panel.json");
+
+async function getPanelData() {
+  return await fs.readJson(PANEL_FILE);
+}
+
+async function savePanelData(data) {
+  await fs.writeJson(PANEL_FILE, data, { spaces: 2 });
+}
+
+async function updateRegistrationPanel() {
+  const panel = await getPanelData();
+
+  if (!panel.messageId || !panel.channelId) {
+    return;
+  }
+
+  const players = await getPlayers();
+
+  const grouped = {
+    TOP: [],
+    JG: [],
+    MID: [],
+    ADC: [],
+    SUP: [],
+  };
+
+  players.forEach((player) => {
+    grouped[player.preferences[0]].push(player.username);
+  });
+
+  const totalPlayers = players.length;
+
+  const remainder = totalPlayers % 5;
+  const missing = remainder === 0 ? 0 : 5 - remainder;
+
+  const content = `
+🏆 ** TURISTAS DO CLASH**
+
+Total de inscritos: ${totalPlayers}
+
+${missing > 0 ? `⚠️ Faltam ${missing} jogador(es) para fechar mais um time completo.\n` : "✅ Times completos.\n"}
+
+${ROLE_EMOJIS.TOP} **TOP (${grouped.TOP.length})**
+${grouped.TOP.length ? grouped.TOP.map((p) => `• ${p}`).join("\n") : "Nenhum"}
+
+${ROLE_EMOJIS.JG} **JG (${grouped.JG.length})**
+${grouped.JG.length ? grouped.JG.map((p) => `• ${p}`).join("\n") : "Nenhum"}
+
+${ROLE_EMOJIS.MID} **MID (${grouped.MID.length})**
+${grouped.MID.length ? grouped.MID.map((p) => `• ${p}`).join("\n") : "Nenhum"}
+
+${ROLE_EMOJIS.ADC} **ADC (${grouped.ADC.length})**
+${grouped.ADC.length ? grouped.ADC.map((p) => `• ${p}`).join("\n") : "Nenhum"}
+
+${ROLE_EMOJIS.SUP} **SUP (${grouped.SUP.length})**
+${grouped.SUP.length ? grouped.SUP.map((p) => `• ${p}`).join("\n") : "Nenhum"}
+`;
+
+  const channel = await client.channels.fetch(panel.channelId);
+
+  const message = await channel.messages.fetch(panel.messageId);
+
+  await message.edit(content);
+}
+
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === "setup") {
@@ -118,6 +184,24 @@ client.on(Events.InteractionCreate, async (interaction) => {
         content:
           "🏆 ** TORNEIO PILOTO TURISTAS DO CLASH**\n\nClique abaixo para realizar sua inscrição.",
         components: [row],
+      });
+    }
+
+    if (interaction.commandName === "setup-painel") {
+      const message = await interaction.channel.send(
+        "🏆 **TURISTAS DO CLASH**\n\nCarregando painel...",
+      );
+
+      await savePanelData({
+        channelId: interaction.channel.id,
+        messageId: message.id,
+      });
+
+      await updateRegistrationPanel();
+
+      await interaction.reply({
+        content: "✅ Painel criado.",
+        ephemeral: true,
       });
     }
 
@@ -187,6 +271,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       if (step === 5) {
         await savePlayer(interaction.user.id, player);
+
+        await updateRegistrationPanel();
 
         const finalRoles = player.preferences
           .map((role) => ROLE_EMOJIS[role])
