@@ -72,6 +72,92 @@ const draftRegistrations = new Map();
 
 const PLAYERS_FILE = path.join(__dirname, "data", "players.json");
 
+function getRoleScore(player, role) {
+  const index = player.preferences.indexOf(role);
+
+  if (index === -1) return 0;
+
+  return 5 - index;
+}
+
+function generateBalancedAssignments(players) {
+  const MAX_PER_ROLE = 4;
+
+  const assignments = {
+    TOP: [],
+    JG: [],
+    MID: [],
+    ADC: [],
+    SUP: [],
+  };
+
+  const playerRole = new Map();
+
+  for (const player of players) {
+    const primaryRole = player.preferences[0];
+
+    assignments[primaryRole].push(player);
+
+    playerRole.set(player.discordId || player.username, primaryRole);
+  }
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+
+    const overloadedRole = Object.keys(assignments).find(
+      (role) => assignments[role].length > MAX_PER_ROLE,
+    );
+
+    if (!overloadedRole) {
+      break;
+    }
+    let bestMove = null;
+
+    for (const player of assignments[overloadedRole]) {
+      const currentIndex = player.preferences.indexOf(overloadedRole);
+
+      for (
+        let targetIndex = currentIndex + 1;
+        targetIndex < player.preferences.length;
+        targetIndex++
+      ) {
+        const targetRole = player.preferences[targetIndex];
+
+        if (assignments[targetRole].length >= MAX_PER_ROLE) {
+          continue;
+        }
+
+        const loss = targetIndex - currentIndex;
+
+        if (!bestMove || loss < bestMove.loss) {
+          bestMove = {
+            player,
+            from: overloadedRole,
+            to: targetRole,
+            loss,
+          };
+        }
+      }
+    }
+    if (!bestMove) {
+      break;
+    }
+
+    assignments[bestMove.from] = assignments[bestMove.from].filter(
+      (p) =>
+        (p.discordId || p.username) !==
+        (bestMove.player.discordId || bestMove.player.username),
+    );
+
+    assignments[bestMove.to].push(bestMove.player);
+
+    changed = true;
+  }
+
+  return assignments;
+}
+
 function getRoleOptions(excludedRoles = []) {
   return ROLE_OPTIONS.filter((role) => !excludedRoles.includes(role.value));
 }
@@ -123,17 +209,7 @@ async function updateRegistrationPanel() {
 
   const players = await getPlayers();
 
-  const grouped = {
-    TOP: [],
-    JG: [],
-    MID: [],
-    ADC: [],
-    SUP: [],
-  };
-
-  players.forEach((player) => {
-    grouped[player.preferences[0]].push(player.username);
-  });
+  const grouped = generateBalancedAssignments(players);
 
   const totalPlayers = players.length;
 
@@ -148,19 +224,19 @@ Total de inscritos: ${totalPlayers}
 ${missing > 0 ? `⚠️ Faltam ${missing} jogador(es) para fechar mais um time completo.\n` : "✅ Times completos.\n"}
 
 ${ROLE_EMOJIS.TOP} **TOP (${grouped.TOP.length})**
-${grouped.TOP.length ? grouped.TOP.map((p) => `• ${p}`).join("\n") : "Nenhum"}
+${grouped.TOP.length ? grouped.TOP.map((p) => `• ${p.username}`).join("\n") : "Nenhum"}
 
 ${ROLE_EMOJIS.JG} **JG (${grouped.JG.length})**
-${grouped.JG.length ? grouped.JG.map((p) => `• ${p}`).join("\n") : "Nenhum"}
+${grouped.JG.length ? grouped.JG.map((p) => `• ${p.username}`).join("\n") : "Nenhum"}
 
 ${ROLE_EMOJIS.MID} **MID (${grouped.MID.length})**
-${grouped.MID.length ? grouped.MID.map((p) => `• ${p}`).join("\n") : "Nenhum"}
+${grouped.MID.length ? grouped.MID.map((p) => `• ${p.username}`).join("\n") : "Nenhum"}
 
 ${ROLE_EMOJIS.ADC} **ADC (${grouped.ADC.length})**
-${grouped.ADC.length ? grouped.ADC.map((p) => `• ${p}`).join("\n") : "Nenhum"}
+${grouped.ADC.length ? grouped.ADC.map((p) => `• ${p.username}`).join("\n") : "Nenhum"}
 
 ${ROLE_EMOJIS.SUP} **SUP (${grouped.SUP.length})**
-${grouped.SUP.length ? grouped.SUP.map((p) => `• ${p}`).join("\n") : "Nenhum"}
+${grouped.SUP.length ? grouped.SUP.map((p) => `• ${p.username}`).join("\n") : "Nenhum"}
 `;
 
   const channel = await client.channels.fetch(panel.channelId);

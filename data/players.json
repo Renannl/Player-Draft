@@ -3,14 +3,70 @@
     {
       "discordId": "329366801215389697",
       "username": "meeps00",
-      "preferences": [
-        "TOP",
-        "JG",
-        "MID",
-        "ADC",
-        "SUP"
-      ],
-      "registeredAt": "2026-06-10T14:28:17.883Z"
+      "preferences": ["JG", "TOP", "ADC", "MID", "SUP"],
+      "registeredAt": "2026-06-10T18:17:24.525Z"
+    },
+    {
+      "discordId": "123456789012345678",
+      "username": "player2",
+      "preferences": ["MID", "JG", "TOP", "ADC", "SUP"],
+      "registeredAt": "2026-06-11T12:00:00.000Z"
+    },
+    {
+      "username": "Renan",
+      "preferences": ["JG", "ADC", "SUP","MID", "TOP"]
+    },
+    {
+      "username": "Joao",
+      "preferences": ["JG", "SUP", "ADC", "MID", "TOP"]
+    },
+    {
+      "username": "Bruno",
+      "preferences": ["JG", "SUP", "TOP", "ADC", "MID"]
+    },
+    {
+      "username": "Carlos",
+      "preferences": ["MID", "TOP", "JG", "ADC", "SUP"]
+    },
+    {
+      "username": "Pedro",
+      "preferences": ["SUP", "MID", "JG", "ADC", "TOP"]
+    },
+    {
+      "username": "Pedro Aides",
+      "preferences": ["SUP", "MID", "JG", "ADC", "TOP"]
+    },
+    {
+      "username": "Pedro Aidescrew",
+      "preferences": ["SUP", "MID", "JG", "ADC", "TOP"]
+    },
+    {
+      "username": "Pedrowqsa",
+      "preferences": ["SUP", "MID", "JG", "ADC", "TOP"]
+    },
+    {
+      "username": "Bruno testador",
+      "preferences": ["JG", "SUP", "TOP", "ADC", "MID"]
+    },
+    {
+      "username": "Pedro Aidescrewv2 att",
+      "preferences": ["SUP", "JG", "MID", "ADC", "TOP"]
+    },
+    {
+      "username": "PTESTE",
+      "preferences": ["SUP","JG", "ADC", "MID", "TOP"]
+    },
+    {
+      "username": "PTESTE 22",
+      "preferences": ["SUP","JG", "ADC", "MID", "TOP"]
+    },
+    {
+      "username": "TTTTESTE jungler",
+      "preferences": ["JG","TOP", "ADC", "MID", "TOP"]
+    },
+    {
+      "username": "ADC Q VAI TER SUP E JG NA FRENTE",
+      "preferences": ["SUP","JG", "ADC", "MID", "TOP"]
     }
   ]
 }
