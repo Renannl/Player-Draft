@@ -3,61 +3,55 @@
     {
       "discordId": "329366801215389697",
       "username": "meeps00",
-      "preferences": [
-        "JG",
-        "MID",
-        "ADC",
-        "SUP",
-        "TOP"
-      ],
-      "registeredAt": "2026-06-11T01:51:44.962Z"
+      "preferences": ["JG", "MID", "ADC", "SUP", "TOP"],
+      "registeredAt": "2026-06-12T19:09:52.005Z"
     },
     {
       "discordId": "435079235837624321",
       "username": "zumano_",
-      "preferences": [
-        "SUP",
-        "TOP",
-        "MID",
-        "ADC",
-        "JG"
-      ],
+      "preferences": ["SUP", "TOP", "MID", "ADC", "JG"],
       "registeredAt": "2026-06-11T01:53:05.321Z"
     },
     {
       "discordId": "202402199203086336",
       "username": "jica22",
-      "preferences": [
-        "TOP",
-        "MID",
-        "ADC",
-        "SUP",
-        "JG"
-      ],
+      "preferences": ["TOP", "MID", "ADC", "SUP", "JG"],
       "registeredAt": "2026-06-11T01:53:06.810Z"
     },
     {
       "discordId": "408998665055895554",
       "username": "jaozinhobr",
-      "preferences": [
-        "TOP",
-        "ADC",
-        "MID",
-        "SUP",
-        "JG"
-      ],
+      "preferences": ["TOP", "ADC", "MID", "SUP", "JG"],
       "registeredAt": "2026-06-11T01:54:23.113Z"
     },
     {
       "discordId": "357566108838002698",
       "username": "molleque",
-      "preferences": [
-        "MID",
-        "TOP",
-        "SUP",
-        "ADC",
-        "JG"
-      ],
+      "preferences": ["MID", "TOP", "SUP", "ADC", "JG"],
+      "registeredAt": "2026-06-12T00:47:47.828Z"
+    },
+    {
+      "discordId": "35756610883843002698",
+      "username": "molleque5",
+      "preferences": ["MID", "TOP", "SUP", "ADC", "JG"],
+      "registeredAt": "2026-06-12T00:47:47.828Z"
+    },
+    {
+      "discordId": "35756610883548002698",
+      "username": "molleque4",
+      "preferences": ["MID", "TOP", "SUP", "ADC", "JG"],
+      "registeredAt": "2026-06-12T00:47:47.828Z"
+    },
+    {
+      "discordId": "357566108833458002698",
+      "username": "molleque3",
+      "preferences": ["MID", "TOP", "SUP", "ADC", "JG"],
+      "registeredAt": "2026-06-12T00:47:47.828Z"
+    },
+    {
+      "discordId": "3575661088343538002698",
+      "username": "molleque2",
+      "preferences": ["MID", "TOP", "SUP", "ADC", "JG"],
       "registeredAt": "2026-06-12T00:47:47.828Z"
     }
   ]
