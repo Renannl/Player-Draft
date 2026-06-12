@@ -90,6 +90,20 @@ client.once("clientReady", () => {
 
 const draftRegistrations = new Map();
 
+const activeDraft = {
+  captains: [],
+  availablePlayers: [],
+  teams: {},
+  currentPick: 0,
+};
+
+const SNAKE_ORDER = [
+  0, 1, 2, 3,
+  3, 2, 1, 0,
+  0, 1, 2, 3,
+  3, 2, 1, 0,
+];
+
 const PLAYERS_FILE = path.join(__dirname, "data", "players.json");
 
 function getRoleScore(player, role) {
@@ -266,6 +280,29 @@ ${grouped.SUP.length ? grouped.SUP.map((p) => `• ${p.username}`).join("\n") : 
   await message.edit(content);
 }
 
+function buildDraftMessage() {
+  let text = "🏆 DRAFT\n\n";
+
+  for (const captain of activeDraft.captains) {
+    text += `💎 ${captain.username}\n`;
+
+    const team =
+      activeDraft.teams[captain.discordId];
+
+    if (!team.length) {
+      text += "Nenhum jogador\n";
+    } else {
+      text += team
+        .map(p => `• ${p.username}`)
+        .join("\n");
+    }
+
+    text += "\n\n";
+  }
+
+  return text;
+}
+
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === "setup") {
@@ -279,6 +316,36 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await interaction.reply({
         content:
           "🏆 ** TORNEIO PILOTO TURISTAS DO CLASH**\n\nClique abaixo para realizar sua inscrição.",
+        components: [row],
+      });
+    }
+
+    if (interaction.commandName === "draft") {
+      const players = await getPlayers();
+
+      if (players.length < 8) {
+        return interaction.reply({
+          content: "É necessário ter pelo menos 8 jogadores inscritos.",
+          ephemeral: true,
+        });
+      }
+
+      const select = new StringSelectMenuBuilder()
+        .setCustomId("select_captains")
+        .setPlaceholder("Escolha os 4 capitães")
+        .setMinValues(4)
+        .setMaxValues(4)
+        .addOptions(
+          players.map((player) => ({
+            label: player.username,
+            value: player.discordId,
+          })),
+        );
+
+      const row = new ActionRowBuilder().addComponents(select);
+
+      await interaction.reply({
+        content: "🏆 Escolha os 4 capitães do draft",
         components: [row],
       });
     }
@@ -338,6 +405,51 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 
   if (interaction.isButton()) {
+    if (interaction.customId.startsWith("role_")) {
+
+      const currentCaptain =
+        activeDraft.captains[activeDraft.currentPick];
+
+      if (interaction.user.id !== currentCaptain.discordId) {
+        return interaction.reply({
+          content: "Não é sua vez de escolher.",
+          ephemeral: true,
+        });
+      }
+      
+      const role = interaction.customId.replace("role_", "");
+
+      const players = activeDraft.availablePlayers.filter(
+        player => player.preferences[0] === role
+      );
+
+      if (!players.length) {
+        return interaction.reply({
+          content: "Nenhum jogador disponível nessa rota.",
+          ephemeral: true,
+        });
+      }
+
+      const select = new StringSelectMenuBuilder()
+        .setCustomId(`pick_${role}`)
+        .setPlaceholder(`Escolha um ${role}`)
+        .addOptions(
+          players.map(player => ({
+            label: player.username,
+            value: player.discordId,
+          }))
+        );
+
+      const row = new ActionRowBuilder().addComponents(select);
+
+      await interaction.reply({
+        content: `Jogadores da rota ${role}`,
+        components: [row],
+        ephemeral: true,
+      });
+
+      return;
+    }
     if (
       interaction.customId.startsWith("players_prev_") ||
       interaction.customId.startsWith("players_next_")
@@ -400,6 +512,126 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
   if (interaction.isStringSelectMenu()) {
+    if (interaction.customId.startsWith("pick_")) {
+      const captainIndex =
+        SNAKE_ORDER[activeDraft.currentPick];
+
+      const currentCaptain =
+        activeDraft.captains[captainIndex];
+
+      const playerId = interaction.values[0];
+
+      const pickedPlayer = activeDraft.availablePlayers.find(
+        p => p.discordId === playerId
+      );
+
+      if (!pickedPlayer) {
+        return interaction.reply({
+          content: "Jogador já escolhido.",
+          ephemeral: true,
+        });
+      }
+
+      activeDraft.teams[currentCaptain.discordId]
+        .push(pickedPlayer);
+
+      activeDraft.availablePlayers =
+        activeDraft.availablePlayers.filter(
+          p => p.discordId !== playerId
+        );
+
+      activeDraft.currentPick++;
+
+      const nextCaptainIndex =
+        SNAKE_ORDER[activeDraft.currentPick];
+
+      const nextCaptain =
+        activeDraft.captains[nextCaptainIndex];
+
+      if (!pickedPlayer) {
+        return interaction.reply({
+          content: "Jogador já escolhido.",
+          ephemeral: true,
+        });
+      }
+
+      await interaction.update({
+        content:
+          buildDraftMessage() +
+          `\n Próximo pick: ${nextCaptain.username}`,
+        components: [],
+      });
+
+      return;
+    }
+    if (interaction.customId === "select_captains") {
+      const players = await getPlayers();
+
+      activeDraft.captains = players.filter((player) =>
+        interaction.values.includes(player.discordId),
+      );
+
+      activeDraft.availablePlayers = players.filter(
+        (player) =>
+          !interaction.values.includes(player.discordId),
+      );
+
+      activeDraft.teams = {};
+
+      for (const captain of activeDraft.captains) {
+        activeDraft.teams[captain.discordId] = [];
+      }
+
+      activeDraft.currentPick = 0;
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId("role_TOP")
+          .setLabel("TOP")
+          .setStyle(ButtonStyle.Primary),
+
+        new ButtonBuilder()
+          .setCustomId("role_JG")
+          .setLabel("JG")
+          .setStyle(ButtonStyle.Success),
+
+        new ButtonBuilder()
+          .setCustomId("role_MID")
+          .setLabel("MID")
+          .setStyle(ButtonStyle.Secondary),
+
+        new ButtonBuilder()
+          .setCustomId("role_ADC")
+          .setLabel("ADC")
+          .setStyle(ButtonStyle.Danger),
+
+        new ButtonBuilder()
+          .setCustomId("role_SUP")
+          .setLabel("SUP")
+          .setStyle(ButtonStyle.Primary)
+      );
+
+      const firstCaptain = activeDraft.captains[0];
+
+      await interaction.update({
+        content:
+          `🏆 DRAFT INICIADO\n\n` +
+          `Vez de: ${firstCaptain.username}`,
+        components: [row],
+      });
+
+      return;
+    }
+
+    if (interaction.customId === "draft_pick") {
+      await interaction.reply({
+        content: "Draft pick recebido!",
+        ephemeral: true,
+      });
+
+      return;
+    }
+
     if (interaction.customId.startsWith("role_step_")) {
       const step = Number(interaction.customId.replace("role_step_", ""));
 

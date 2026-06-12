@@ -17,6 +17,14 @@ const commands = [
     .setName("setup-painel")
     .setDescription("Cria o painel de inscrições")
     .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("draft")
+    .setDescription("Inicia um draft"),
+
+  new SlashCommandBuilder()
+    .setName("encerrar-draft")
+    .setDescription("Encerra o draft"),
 ];
 
 const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
