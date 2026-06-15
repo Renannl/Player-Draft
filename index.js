@@ -96,6 +96,9 @@ const activeDraft = {
   pickedPlayers: [],
   teams: {},
   currentPick: 0,
+  groupedPlayers: {},
+  panelMessageId: null,
+  panelChannelId: null,
 };
 
 const SNAKE_ORDER = [0, 1, 2, 3, 3, 2, 1, 0, 0, 1, 2, 3, 3, 2, 1, 0];
@@ -241,6 +244,8 @@ async function updateRegistrationPanel() {
 
   const grouped = generateBalancedAssignments(players);
 
+  activeDraft.groupedPlayers = grouped;
+
   const totalPlayers = players.length;
 
   const remainder = totalPlayers % 5;
@@ -280,14 +285,21 @@ function buildDraftMessage() {
   let text = "🏆 DRAFT\n\n";
 
   for (const captain of activeDraft.captains) {
-    text += `💎 ${captain.username}\n`;
+    text += `©️ ${captain.username}\n`;
 
     const team = activeDraft.teams[captain.discordId];
 
-    if (!team.length) {
+    const playersOnly = team.filter(
+      (p) =>
+        (p.discordId || p.username) !== (captain.discordId || captain.username),
+    );
+
+    if (!playersOnly.length) {
       text += "Nenhum jogador\n";
     } else {
-      text += team.map((p) => `• ${p.username}`).join("\n");
+      text += playersOnly
+        .map((p) => `• ${p.laneEmoji || ""} ${p.username}`)
+        .join("\n");
     }
 
     text += "\n\n";
@@ -297,31 +309,117 @@ function buildDraftMessage() {
 }
 
 function buildDraftPanel() {
-  const roles = ["TOP", "JG", "MID", "ADC", "SUP"];
+  const grouped = activeDraft.groupedPlayers;
 
-  let text = "🏆 DRAFT\n\n";
+  let text = "🏆 JOGADORES DISPONÍVEIS\n\n";
 
-  for (const role of roles) {
-    text += `${role}\n`;
+  for (const role of ["TOP", "JG", "MID", "ADC", "SUP"]) {
+    text += `${ROLE_EMOJIS[role]} ${role}\n`;
 
-    const rolePlayers = [
-      ...activeDraft.availablePlayers.filter((p) => p.preferences[0] === role),
+    const players = grouped[role];
 
-      ...activeDraft.pickedPlayers.filter((p) => p.preferences[0] === role),
-    ];
+    if (!players.length) {
+      text += "Nenhum\n\n";
+      continue;
+    }
 
-    for (const player of rolePlayers) {
-      const picked = activeDraft.pickedPlayers.some(
-        (p) => p.discordId === player.discordId,
+    for (const player of players) {
+      // Não mostra capitães na lista
+      const isCaptain = activeDraft.captains.some(
+        (captain) =>
+          (captain.discordId || captain.username) ===
+          (player.discordId || player.username),
       );
 
-      text += picked ? `~~${player.username}~~\n` : `⭕ ${player.username}\n`;
+      if (isCaptain) continue;
+
+      const pickedPlayer = activeDraft.pickedPlayers.find(
+        (p) =>
+          (p.discordId || p.username) === (player.discordId || player.username),
+      );
+
+      const laneEmoji = pickedPlayer?.laneEmoji || "";
+
+      text += pickedPlayer
+        ? `• ~~ ${player.username}~~\n`
+        : `• ${player.username}\n`;
     }
 
     text += "\n";
   }
 
   return text;
+}
+
+function buildDraftBoard() {
+  const nextCaptainIndex = SNAKE_ORDER[activeDraft.currentPick];
+
+  const nextCaptain = activeDraft.captains[nextCaptainIndex];
+
+  return (
+    buildDraftPanel() +
+    "\n-------------------\n\n" +
+    buildDraftMessage() +
+    "\n-------------------\n\n" +
+    `Próximo pick: ${nextCaptain?.username ?? "Finalizado"}`
+  );
+}
+
+async function updateDraftBoard() {
+  if (!activeDraft.panelMessageId) return;
+
+  const channel = await client.channels.fetch(activeDraft.panelChannelId);
+
+  const message = await channel.messages.fetch(activeDraft.panelMessageId);
+
+  const nextCaptainIndex = SNAKE_ORDER[activeDraft.currentPick];
+
+  const nextCaptain = activeDraft.captains[nextCaptainIndex];
+
+  const roleButtons = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("role_TOP")
+      .setLabel("TOP")
+      .setStyle(ButtonStyle.Primary),
+
+    new ButtonBuilder()
+      .setCustomId("role_JG")
+      .setLabel("JG")
+      .setStyle(ButtonStyle.Success),
+
+    new ButtonBuilder()
+      .setCustomId("role_MID")
+      .setLabel("MID")
+      .setStyle(ButtonStyle.Secondary),
+
+    new ButtonBuilder()
+      .setCustomId("role_ADC")
+      .setLabel("ADC")
+      .setStyle(ButtonStyle.Danger),
+
+    new ButtonBuilder()
+      .setCustomId("role_SUP")
+      .setLabel("SUP")
+      .setStyle(ButtonStyle.Primary),
+  );
+
+  if (!nextCaptain) {
+    await message.edit({
+      content:
+        buildDraftPanel() +
+        "\n-------------------\n\n" +
+        buildDraftMessage() +
+        "\n🏆 Draft Finalizado",
+      components: [],
+    });
+
+    return;
+  }
+
+  await message.edit({
+    content: buildDraftBoard(),
+    components: [roleButtons],
+  });
 }
 
 client.on(Events.InteractionCreate, async (interaction) => {
@@ -440,8 +538,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       const role = interaction.customId.replace("role_", "");
 
-      const players = activeDraft.availablePlayers.filter(
-        (player) => player.preferences[0] === role,
+      const players = activeDraft.groupedPlayers[role].filter(
+        (player) =>
+          !activeDraft.pickedPlayers.some(
+            (picked) =>
+              (picked.discordId || picked.username) ===
+              (player.discordId || player.username),
+          ),
       );
 
       if (!players.length) {
@@ -538,6 +641,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       const currentCaptain = activeDraft.captains[captainIndex];
 
+      const role = interaction.customId.replace("pick_", "");
+
       const playerId = interaction.values[0];
 
       const pickedPlayer = activeDraft.availablePlayers.find(
@@ -551,9 +656,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
         });
       }
 
-      activeDraft.teams[currentCaptain.discordId].push(pickedPlayer);
+      const draftedPlayer = {
+        ...pickedPlayer,
+        lane: role,
+        laneEmoji: ROLE_EMOJIS[role],
+      };
 
-      activeDraft.pickedPlayers.push(pickedPlayer);
+      activeDraft.teams[currentCaptain.discordId].push(draftedPlayer);
+
+      activeDraft.pickedPlayers.push(draftedPlayer);
 
       activeDraft.availablePlayers = activeDraft.availablePlayers.filter(
         (p) => p.discordId !== playerId,
@@ -561,51 +672,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       activeDraft.currentPick++;
 
-      const nextCaptainIndex = SNAKE_ORDER[activeDraft.currentPick];
-
-      const nextCaptain = activeDraft.captains[nextCaptainIndex];
-
-      if (!pickedPlayer) {
-        return interaction.reply({
-          content: "Jogador já escolhido.",
-          ephemeral: true,
-        });
-      }
-
-      const roleButtons = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId("role_TOP")
-          .setLabel("TOP")
-          .setStyle(ButtonStyle.Primary),
-
-        new ButtonBuilder()
-          .setCustomId("role_JG")
-          .setLabel("JG")
-          .setStyle(ButtonStyle.Success),
-
-        new ButtonBuilder()
-          .setCustomId("role_MID")
-          .setLabel("MID")
-          .setStyle(ButtonStyle.Secondary),
-
-        new ButtonBuilder()
-          .setCustomId("role_ADC")
-          .setLabel("ADC")
-          .setStyle(ButtonStyle.Danger),
-
-        new ButtonBuilder()
-          .setCustomId("role_SUP")
-          .setLabel("SUP")
-          .setStyle(ButtonStyle.Primary),
-      );
+      await updateDraftBoard();
 
       await interaction.update({
-        content:
-          buildDraftPanel() +
-          "\n" +
-          buildDraftMessage() +
-          `Próximo pick: ${nextCaptain.username}`,
-        components: [roleButtons],
+        content: `✅ ${pickedPlayer.username} escolhido.`,
+        components: [],
       });
 
       return;
@@ -613,18 +684,31 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.customId === "select_captains") {
       const players = await getPlayers();
 
-      activeDraft.captains = players.filter((player) =>
-        interaction.values.includes(player.discordId),
+      const captainIds = interaction.values;
+
+      const captains = players.filter((player) =>
+        captainIds.includes(player.discordId),
       );
 
+      activeDraft.captains = captains;
+
       activeDraft.availablePlayers = players.filter(
-        (player) => !interaction.values.includes(player.discordId),
+        (player) =>
+          !captains.some(
+            (captain) =>
+              (captain.discordId || captain.username) ===
+              (player.discordId || player.username),
+          ),
+      );
+
+      activeDraft.groupedPlayers = generateBalancedAssignments(
+        activeDraft.availablePlayers,
       );
 
       activeDraft.teams = {};
 
-      for (const captain of activeDraft.captains) {
-        activeDraft.teams[captain.discordId] = [];
+      for (const captain of captains) {
+        activeDraft.teams[captain.discordId] = [captain];
       }
 
       activeDraft.currentPick = 0;
@@ -659,9 +743,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       const firstCaptain = activeDraft.captains[0];
 
-      await interaction.update({
-        content: buildDraftPanel() + `\n Vez de: ${firstCaptain.username}`,
+      const draftMessage = await interaction.channel.send({
+        content: buildDraftBoard(),
         components: [row],
+      });
+
+      activeDraft.panelMessageId = draftMessage.id;
+      activeDraft.panelChannelId = draftMessage.channel.id;
+
+      await interaction.update({
+        content: "✅ Capitães definidos. O painel do draft foi criado.",
+        components: [],
       });
 
       return;
