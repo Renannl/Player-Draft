@@ -3,14 +3,15 @@
     {
       "discordId": "329366801215389697",
       "username": "meeps00",
+      "opgg": "https://op.gg/pt/lol/summoners/br/ITO%20Meeps-ITO",
       "preferences": [
-        "TOP",
         "JG",
         "MID",
         "ADC",
-        "SUP"
+        "SUP",
+        "TOP"
       ],
-      "registeredAt": "2026-06-15T13:58:31.743Z"
+      "registeredAt": "2026-06-15T17:35:09.463Z"
     },
     {
       "discordId": "435079235837624321",

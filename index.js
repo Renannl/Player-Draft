@@ -8,6 +8,9 @@ const {
   ButtonBuilder,
   ButtonStyle,
   StringSelectMenuBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
 } = require("discord.js");
 const fs = require("fs-extra");
 const path = require("path");
@@ -210,6 +213,7 @@ async function savePlayer(discordId, playerData) {
   const player = {
     discordId,
     username: playerData.username,
+    opgg: playerData.opgg,
     preferences: playerData.preferences,
     registeredAt: new Date().toISOString(),
   };
@@ -252,33 +256,69 @@ async function updateRegistrationPanel() {
   const missing = remainder === 0 ? 0 : 5 - remainder;
 
   const content = `
-🏆 ** TURISTAS DO CLASH**
+🏆 **TURISTAS DO CLASH**
 
 Total de inscritos: ${totalPlayers}
 
-${missing > 0 ? `⚠️ Faltam ${missing} jogador(es) para fechar mais um time completo.\n` : "✅ Times completos.\n"}
+${
+  missing > 0
+    ? `⚠️ Faltam ${missing} jogador(es) para fechar mais um time completo.`
+    : "✅ Times completos."
+}
 
 ${ROLE_EMOJIS.TOP} **TOP (${grouped.TOP.length})**
-${grouped.TOP.length ? grouped.TOP.map((p) => `• ${p.username}`).join("\n") : "Nenhum"}
+${
+  grouped.TOP.length
+    ? grouped.TOP.map((p) =>
+        p.opgg ? `• [${p.username}](<${p.opgg}>)` : `• ${p.username}`,
+      ).join("\n")
+    : "Nenhum"
+}
 
 ${ROLE_EMOJIS.JG} **JG (${grouped.JG.length})**
-${grouped.JG.length ? grouped.JG.map((p) => `• ${p.username}`).join("\n") : "Nenhum"}
+${
+  grouped.JG.length
+    ? grouped.JG.map((p) =>
+        p.opgg ? `• [${p.username}](<${p.opgg}>)` : `• ${p.username}`,
+      ).join("\n")
+    : "Nenhum"
+}
 
 ${ROLE_EMOJIS.MID} **MID (${grouped.MID.length})**
-${grouped.MID.length ? grouped.MID.map((p) => `• ${p.username}`).join("\n") : "Nenhum"}
+${
+  grouped.MID.length
+    ? grouped.MID.map((p) =>
+        p.opgg ? `• [${p.username}](<${p.opgg}>)` : `• ${p.username}`,
+      ).join("\n")
+    : "Nenhum"
+}
 
 ${ROLE_EMOJIS.ADC} **ADC (${grouped.ADC.length})**
-${grouped.ADC.length ? grouped.ADC.map((p) => `• ${p.username}`).join("\n") : "Nenhum"}
+${
+  grouped.ADC.length
+    ? grouped.ADC.map((p) =>
+        p.opgg ? `• [${p.username}](<${p.opgg}>)` : `• ${p.username}`,
+      ).join("\n")
+    : "Nenhum"
+}
 
 ${ROLE_EMOJIS.SUP} **SUP (${grouped.SUP.length})**
-${grouped.SUP.length ? grouped.SUP.map((p) => `• ${p.username}`).join("\n") : "Nenhum"}
+${
+  grouped.SUP.length
+    ? grouped.SUP.map((p) =>
+        p.opgg ? `• [${p.username}](<${p.opgg}>)` : `• ${p.username}`,
+      ).join("\n")
+    : "Nenhum"
+}
 `;
 
   const channel = await client.channels.fetch(panel.channelId);
 
   const message = await channel.messages.fetch(panel.messageId);
 
-  await message.edit(content);
+  await message.edit({
+    content,
+  });
 }
 
 function buildDraftMessage() {
@@ -324,7 +364,6 @@ function buildDraftPanel() {
     }
 
     for (const player of players) {
-      // Não mostra capitães na lista
       const isCaptain = activeDraft.captains.some(
         (captain) =>
           (captain.discordId || captain.username) ===
@@ -619,6 +658,39 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.customId === "register") {
       draftRegistrations.delete(interaction.user.id);
 
+      const modal = new ModalBuilder()
+        .setCustomId("opgg_modal")
+        .setTitle("Inscrição");
+
+      const opggInput = new TextInputBuilder()
+        .setCustomId("opgg")
+        .setLabel("Informe seu OP.GG")
+        .setPlaceholder("https://www.op.gg/summoners/br/...")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+
+      const row = new ActionRowBuilder().addComponents(opggInput);
+
+      modal.addComponents(row);
+
+      await interaction.showModal(modal);
+
+      return;
+    }
+
+    return;
+  }
+
+  if (interaction.isModalSubmit()) {
+    if (interaction.customId === "opgg_modal") {
+      const opgg = interaction.fields.getTextInputValue("opgg");
+
+      draftRegistrations.set(interaction.user.id, {
+        username: interaction.user.username,
+        opgg,
+        preferences: [],
+      });
+
       const select = new StringSelectMenuBuilder()
         .setCustomId("role_step_1")
         .setPlaceholder("Escolha sua role principal")
@@ -627,14 +699,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const row = new ActionRowBuilder().addComponents(select);
 
       await interaction.reply({
-        content: "Escolha sua role principal:",
+        content: `OP.GG registrado:\n${opgg}\n\nAgora escolha sua role principal:`,
         components: [row],
         ephemeral: true,
       });
-    }
 
-    return;
+      return;
+    }
   }
+
   if (interaction.isStringSelectMenu()) {
     if (interaction.customId.startsWith("pick_")) {
       const captainIndex = SNAKE_ORDER[activeDraft.currentPick];
@@ -773,10 +846,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
       const selectedRole = interaction.values[0];
 
-      let player = draftRegistrations.get(interaction.user.id) || {
-        username: interaction.user.username,
-        preferences: [],
-      };
+      let player = draftRegistrations.get(interaction.user.id);
+
+      if (!player) {
+        return interaction.reply({
+          content:
+            "Sua inscrição expirou. Clique novamente em Fazer Inscrição.",
+          ephemeral: true,
+        });
+      }
 
       player.preferences.push(selectedRole);
 
@@ -794,7 +872,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
         draftRegistrations.delete(interaction.user.id);
 
         await interaction.update({
-          content: `✅ Inscrição concluída!\n\n${finalRoles}`,
+          content:
+            `✅ Inscrição concluída!\n\n` +
+            `OP.GG: ${player.opgg}\n\n` +
+            `${finalRoles}`,
           components: [],
         });
 
