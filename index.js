@@ -669,9 +669,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
 
-      const row = new ActionRowBuilder().addComponents(opggInput);
+      const lolNickInput = new TextInputBuilder()
+        .setCustomId("lol_nick")
+        .setLabel("Nick do League")
+        .setPlaceholder("Faker#KR1")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
 
-      modal.addComponents(row);
+      const row1 = new ActionRowBuilder().addComponents(lolNickInput);
+      const row2 = new ActionRowBuilder().addComponents(opggInput);
+
+      modal.addComponents(row1, row2);
 
       await interaction.showModal(modal);
 
@@ -683,10 +691,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
   if (interaction.isModalSubmit()) {
     if (interaction.customId === "opgg_modal") {
+      const lolNick = interaction.fields.getTextInputValue("lol_nick");
       const opgg = interaction.fields.getTextInputValue("opgg");
 
       draftRegistrations.set(interaction.user.id, {
-        username: interaction.user.username,
+        username: lolNick,
         opgg,
         preferences: [],
       });
